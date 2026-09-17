@@ -13,7 +13,9 @@ import com.stayhub.domain.SupplierCode;
 import com.stayhub.domain.SupplierResult;
 import com.stayhub.domain.port.SupplierAdapter;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriBuilder;
@@ -62,18 +64,45 @@ public class SupplierBAdapter implements SupplierAdapter {
 
     @Override
     public Mono<SupplierResult<List<Offer>>> fetchAvailability(List<String> supplierHotelCodes, StaySearchCriteria criteria) {
+        Map<String, Object> variables = new HashMap<>();
+        String codesTemplate = codeVariables(supplierHotelCodes, variables);
+        variables.put("checkIn", criteria.checkIn());
+        variables.put("checkOut", criteria.checkOut());
+        variables.put("adults", criteria.adults());
+        variables.put("children", criteria.children());
         Mono<SupplierResult<List<Offer>>> call = get(uri -> uri.path("/b/api/search")
-                        .queryParam("propertyIds", String.join(",", supplierHotelCodes))
-                        .queryParam("checkIn", criteria.checkIn())
-                        .queryParam("checkOut", criteria.checkOut())
-                        .queryParam("adults", criteria.adults())
-                        .queryParam("children", criteria.children())
-                        .build(),
+                        .queryParam("propertyIds", codesTemplate)
+                        .queryParam("checkIn", "{checkIn}")
+                        .queryParam("checkOut", "{checkOut}")
+                        .queryParam("adults", "{adults}")
+                        .queryParam("children", "{children}")
+                        .build(variables),
                 items -> mapper.toOffers(items, criteria));
         return executor.execute(SupplierCode.B, "availability", integration.availabilityResponseTimeout(), call);
     }
 
+    /**
+     * 숙소 코드를 코드마다 URI 변수 하나로 넘긴다 (FX-02).
+     * 값은 변수 단위로 인코딩되어 `+`, `{`, `&` 같은 문자가 그대로 전달되고, 템플릿의 구분자 쉼표는 그대로 나간다.
+     */
+    private static String codeVariables(List<String> codes, Map<String, Object> variables) {
+        StringBuilder template = new StringBuilder();
+        for (int i = 0; i < codes.size(); i++) {
+            if (i > 0) {
+                template.append(',');
+            }
+            template.append("{code").append(i).append('}');
+            variables.put("code" + i, codes.get(i));
+        }
+        return template.toString();
+    }
+
+    /** URI 조립 중 예외도 호출 실행기가 실패 결과로 바꾸도록 구독 시점까지 미룬다 (FX-02). */
     private <T> Mono<SupplierResult<T>> get(Function<UriBuilder, URI> uri, Function<JsonNode, T> itemsMapper) {
+        return Mono.defer(() -> request(uri, itemsMapper));
+    }
+
+    private <T> Mono<SupplierResult<T>> request(Function<UriBuilder, URI> uri, Function<JsonNode, T> itemsMapper) {
         return webClients.webClient(SupplierCode.B).get()
                 .uri(uri)
                 .exchangeToMono(response -> response.bodyToMono(String.class)
