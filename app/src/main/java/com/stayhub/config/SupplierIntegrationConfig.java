@@ -9,7 +9,6 @@ import com.stayhub.application.SearchStaysService;
 import com.stayhub.application.StartupCatalogSync;
 import com.stayhub.application.SupplierRegistry;
 import com.stayhub.application.SyncSupplierCatalogService;
-import java.time.Duration;
 import com.stayhub.domain.port.StayMappingRepository;
 import com.stayhub.domain.port.SupplierAdapter;
 import org.springframework.beans.factory.ObjectProvider;
@@ -35,12 +34,11 @@ public class SupplierIntegrationConfig {
         return new SupplierRegistry(adapters.orderedStream().toList());
     }
 
-    /** 목록 응답 타임아웃에 여유 1초를 더해 기다린다 (SY-02). */
+    /** 목록 호출의 재시도까지 끝나도록 기다린다 (SY-02, FX-03). */
     @Bean
     public SyncSupplierCatalogService syncSupplierCatalogService(
             SupplierRegistry registry, CatalogMappingWriter writer, IntegrationProperties integration) {
-        return new SyncSupplierCatalogService(registry, writer,
-                integration.catalogResponseTimeout().plus(Duration.ofSeconds(1)));
+        return new SyncSupplierCatalogService(registry, writer, integration.catalogSyncWait());
     }
 
     @Bean
