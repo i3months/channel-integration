@@ -8,12 +8,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.stayhub.application.SyncResult;
 import com.stayhub.application.SyncSupplierCatalogService;
+import com.stayhub.application.UnknownSupplierException;
 import com.stayhub.domain.FailureReason;
 import com.stayhub.domain.SupplierCode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(SupplierSyncController.class)
@@ -32,7 +34,7 @@ class SupplierSyncControllerTest {
         mvc.perform(post("/internal/suppliers/a/sync"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("""
-                        {"supplier":"A","added":2,"updated":0,"deactivated":0}""", true));
+                        {"supplier":"A","added":2,"updated":0,"deactivated":0}""", JsonCompareMode.STRICT));
     }
 
     @Test
@@ -40,12 +42,12 @@ class SupplierSyncControllerTest {
         mvc.perform(post("/internal/suppliers/x/sync"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().json("""
-                        {"code":"UNKNOWN_SUPPLIER","message":"unknown supplier: x"}""", true));
+                        {"code":"UNKNOWN_SUPPLIER","message":"unknown supplier: x"}""", JsonCompareMode.STRICT));
     }
 
     @Test
-    void SY05_코드는_있지만_어댑터가_없는_공급사도_404() throws Exception {
-        when(service.sync(SupplierCode.B)).thenThrow(new IllegalArgumentException("no adapter for supplier: B"));
+    void T108_코드는_있지만_어댑터가_없는_공급사도_404() throws Exception {
+        when(service.sync(SupplierCode.B)).thenThrow(new UnknownSupplierException(SupplierCode.B));
 
         mvc.perform(post("/internal/suppliers/B/sync"))
                 .andExpect(status().isNotFound())
@@ -60,12 +62,21 @@ class SupplierSyncControllerTest {
         mvc.perform(post("/internal/suppliers/A/sync"))
                 .andExpect(status().isBadGateway())
                 .andExpect(content().json("""
-                        {"code":"SUPPLIER_UNAVAILABLE","message":"503 SERVICE_UNAVAILABLE"}""", true));
+                        {"code":"SUPPLIER_UNAVAILABLE","message":"503 SERVICE_UNAVAILABLE"}""", JsonCompareMode.STRICT));
     }
 
     @Test
     void SY05_반영_중_예외면_500_INTERNAL_ERROR() throws Exception {
         when(service.sync(SupplierCode.A)).thenThrow(new IllegalStateException("constraint violation"));
+
+        mvc.perform(post("/internal/suppliers/a/sync"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
+    }
+
+    @Test
+    void T109_반영_중_난_IllegalArgumentException_은_404_가_아니라_500() throws Exception {
+        when(service.sync(SupplierCode.A)).thenThrow(new IllegalArgumentException("unknown stay id: 9"));
 
         mvc.perform(post("/internal/suppliers/a/sync"))
                 .andExpect(status().isInternalServerError())

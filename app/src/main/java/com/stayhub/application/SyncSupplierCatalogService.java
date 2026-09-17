@@ -48,7 +48,7 @@ public class SyncSupplierCatalogService {
 
     private SyncResult syncLocked(SupplierCode supplier) {
         SupplierAdapter adapter = registry.find(supplier)
-                .orElseThrow(() -> new IllegalArgumentException("no adapter for supplier: " + supplier));
+                .orElseThrow(() -> new UnknownSupplierException(supplier));
 
         SupplierResult<List<CatalogEntry>> result = adapter.fetchCatalog()
                 .timeout(catalogWait, Mono.just(SupplierResult.failure(

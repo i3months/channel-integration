@@ -2,6 +2,7 @@ package com.stayhub.adapter.in.web;
 
 import com.stayhub.application.SyncResult;
 import com.stayhub.application.SyncSupplierCatalogService;
+import com.stayhub.application.UnknownSupplierException;
 import com.stayhub.domain.SupplierCode;
 import io.swagger.v3.oas.annotations.Operation;
 import org.slf4j.Logger;
@@ -36,7 +37,7 @@ public class SupplierSyncController {
         SyncResult result;
         try {
             result = service.sync(supplier);
-        } catch (IllegalArgumentException e) {
+        } catch (UnknownSupplierException e) {
             return unknownSupplier(supplierCode);
         } catch (RuntimeException e) {
             log.error("event=catalog_sync_error supplier={}", supplier, e);
