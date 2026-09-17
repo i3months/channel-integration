@@ -1,0 +1,48 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: channel-integration
+  datasource:
+    url: jdbc:h2:mem:stayhub;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create
+    open-in-view: false
+  h2:
+    console:
+      enabled: true
+
+suppliers:
+  a:
+    base-url: http://localhost:9090
+    api-key: mock-key-a
+  b:
+    base-url: http://localhost:9090
+    api-key: mock-key-b
+
+integration:
+  sync-on-startup: true
+  connect-timeout: 1s
+  availability-response-timeout: 3s
+  catalog-response-timeout: 10s
+  search-budget: 5s
+  chunk-size: 50
+  chunk-concurrency: 4
+  retry:
+    max-attempts: 2
+    wait: 300ms
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        supplier.call.duration: true
+        search.duration: true

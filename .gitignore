@@ -1,2 +1,7 @@
 .DS_Store
 *.pdf
+.gradle/
+build/
+.idea/
+*.iml
+/out/
