@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import org.springframework.core.codec.DecodingException;
+import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 /**
@@ -41,7 +42,9 @@ public final class FailureClassifier {
             return SupplierResult.failure(FailureReason.UNAVAILABLE, describe(connect.get()));
         }
 
-        Optional<Throwable> decoding = find(chain, DecodingException.class, JacksonException.class);
+        // 버퍼 한도 초과는 다시 요청해도 크기가 같으므로 재시도하지 않는 MALFORMED 로 본다 (FX-01)
+        Optional<Throwable> decoding = find(chain,
+                DecodingException.class, JacksonException.class, DataBufferLimitException.class);
         if (decoding.isPresent()) {
             return SupplierResult.failure(FailureReason.MALFORMED, describe(decoding.get()));
         }

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.core.codec.DecodingException;
+import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
@@ -111,5 +112,11 @@ class FailureClassifierTest {
 
         assertThat(message).startsWith("ServiceUnavailable: ");
         assertThat(message).endsWith(" body=" + "x".repeat(200));
+    }
+
+    @Test
+    void T101_버퍼_한도_초과는_다시_요청해도_같으므로_MALFORMED() {
+        assertThat(reasonOf(new DataBufferLimitException("Exceeded limit on max bytes to buffer : 262144")))
+                .isEqualTo(FailureReason.MALFORMED);
     }
 }
