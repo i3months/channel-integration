@@ -5,10 +5,12 @@ import com.stayhub.adapter.out.supplier.common.SupplierCallExecutor;
 import com.stayhub.adapter.out.supplier.common.SupplierProperties;
 import com.stayhub.adapter.out.supplier.common.WebClientFactory;
 import com.stayhub.application.CatalogMappingWriter;
+import com.stayhub.application.SearchStaysService;
 import com.stayhub.application.StartupCatalogSync;
 import com.stayhub.application.SupplierRegistry;
 import com.stayhub.application.SyncSupplierCatalogService;
 import java.time.Duration;
+import com.stayhub.domain.port.StayMappingRepository;
 import com.stayhub.domain.port.SupplierAdapter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
@@ -45,5 +47,12 @@ public class SupplierIntegrationConfig {
     public StartupCatalogSync startupCatalogSync(
             SupplierRegistry registry, SyncSupplierCatalogService service, IntegrationProperties integration) {
         return new StartupCatalogSync(registry, service, integration.syncOnStartup());
+    }
+
+    @Bean
+    public SearchStaysService searchStaysService(
+            StayMappingRepository repository, SupplierRegistry registry, IntegrationProperties integration) {
+        return new SearchStaysService(repository, registry, integration.searchBudget(), integration.chunkSize(),
+                integration.chunkConcurrency());
     }
 }
