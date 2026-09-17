@@ -40,9 +40,4 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,metrics,prometheus
-  metrics:
-    distribution:
-      percentiles-histogram:
-        supplier.call.duration: true
-        search.duration: true
+        include: health,metrics

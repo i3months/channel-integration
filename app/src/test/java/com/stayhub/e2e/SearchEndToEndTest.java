@@ -107,6 +107,7 @@ class SearchEndToEndTest {
         JsonNode b = body.get("items").get(1);
         assertThat(b.get("supplier").asText()).isEqualTo("B");
         assertThat(b.get("roomTypeName").asText()).isEqualTo("Deluxe Twin Room");
+        assertThat(b.get("availableRooms").asInt()).isEqualTo(1);
         assertThat(b.at("/price/totalAmount").asLong()).isEqualTo(452_000L);
         assertThat(b.at("/price/breakfastIncluded").asBoolean()).isTrue();
         assertThat(b.get("price").has("daily")).isTrue();

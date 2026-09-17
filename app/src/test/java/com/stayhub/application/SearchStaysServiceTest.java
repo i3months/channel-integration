@@ -126,6 +126,7 @@ class SearchStaysServiceTest {
         SearchItem b = result.items().get(1);
         assertThat(b.supplier()).isEqualTo(SupplierCode.B);
         assertThat(b.roomTypeName()).isEqualTo("Deluxe Twin Room");
+        assertThat(b.availableRooms()).isEqualTo(1);
         assertThat(b.price().totalAmount()).isEqualTo(452_000L);
         assertThat(b.price().breakfastIncluded()).isTrue();
         assertThat(b.price().daily()).isNull();

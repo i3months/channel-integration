@@ -90,7 +90,11 @@ class SupplierAAdapterTest {
             assertThat(riverside.supplierHotelCode()).isEqualTo("A-10023");
             assertThat(riverside.availableRooms()).isEqualTo(1);
             assertThat(riverside.price().totalAmount()).isEqualTo(429_000L);
-            assertThat(riverside.price().daily()).hasSize(3);
+            assertThat(riverside.price().breakfastIncluded()).isFalse();
+            assertThat(riverside.price().nights()).isEqualTo(3);
+            assertThat(riverside.price().daily()).extracting(com.stayhub.domain.DailyRate::date).containsExactly(
+                    LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 2), LocalDate.of(2026, 9, 3));
+            assertThat(offers.get(1).availableRooms()).isZero();
         });
     }
 
