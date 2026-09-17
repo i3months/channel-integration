@@ -26,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(SearchController.class)
@@ -106,7 +107,7 @@ class SearchControllerTest {
                           ],
                           "failures": []
                         }
-                        """, true))
+                        """, JsonCompareMode.STRICT))
                 .andExpect(jsonPath("$.items[1].price.daily").isEmpty())
                 .andExpect(jsonPath("$.items[1].price", org.hamcrest.Matchers.hasKey("daily")));
     }
@@ -131,7 +132,7 @@ class SearchControllerTest {
         mvc.perform(get(URL).param("checkIn", "2026-09-01").param("adults", "2"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().json("""
-                        {"code":"MISSING_PARAMETER","message":"checkOut is required"}""", true));
+                        {"code":"MISSING_PARAMETER","message":"checkOut is required"}""", JsonCompareMode.STRICT));
         verify(service, never()).search(any());
     }
 
@@ -140,7 +141,7 @@ class SearchControllerTest {
         mvc.perform(get(URL).param("checkIn", "2026-13-01").param("checkOut", "2026-09-04").param("adults", "2"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().json("""
-                        {"code":"INVALID_PARAMETER","message":"checkIn must be yyyy-MM-dd"}""", true));
+                        {"code":"INVALID_PARAMETER","message":"checkIn must be yyyy-MM-dd"}""", JsonCompareMode.STRICT));
     }
 
     @Test
@@ -148,7 +149,7 @@ class SearchControllerTest {
         mvc.perform(get(URL).param("checkIn", "2026-09-01").param("checkOut", "2026-09-04").param("adults", "two"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().json("""
-                        {"code":"INVALID_PARAMETER","message":"adults must be an integer"}""", true));
+                        {"code":"INVALID_PARAMETER","message":"adults must be an integer"}""", JsonCompareMode.STRICT));
     }
 
     @Test
@@ -156,7 +157,7 @@ class SearchControllerTest {
         mvc.perform(get(URL).param("checkIn", "2026-09-01").param("checkOut", "2026-09-01").param("adults", "2"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().json("""
-                        {"code":"INVALID_DATE_RANGE","message":"checkOut must be after checkIn"}""", true));
+                        {"code":"INVALID_DATE_RANGE","message":"checkOut must be after checkIn"}""", JsonCompareMode.STRICT));
         verify(service, never()).search(any());
     }
 
@@ -172,7 +173,7 @@ class SearchControllerTest {
         mvc.perform(get(URL).param("checkIn", "2026-09-01").param("checkOut", "2026-09-04").param("adults", "0"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().json("""
-                        {"code":"INVALID_PARAMETER","message":"adults must be at least 1"}""", true));
+                        {"code":"INVALID_PARAMETER","message":"adults must be at least 1"}""", JsonCompareMode.STRICT));
     }
 
     @Test
@@ -181,7 +182,7 @@ class SearchControllerTest {
                         .param("adults", "2").param("children", "-1"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().json("""
-                        {"code":"INVALID_PARAMETER","message":"children must be at least 0"}""", true));
+                        {"code":"INVALID_PARAMETER","message":"children must be at least 0"}""", JsonCompareMode.STRICT));
     }
 
     @Test
@@ -201,7 +202,7 @@ class SearchControllerTest {
         mvc.perform(get(URL).param("checkIn", "2026-09-01").param("checkOut", "2026-10-02").param("adults", "2"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().json("""
-                        {"code":"INVALID_DATE_RANGE","message":"stay length must be 30 nights or less"}""", true));
+                        {"code":"INVALID_DATE_RANGE","message":"stay length must be 30 nights or less"}""", JsonCompareMode.STRICT));
     }
 
     @Test
@@ -219,7 +220,7 @@ class SearchControllerTest {
         mvc.perform(get(URL).param("checkIn", "2026-09-01").param("checkOut", "2026-09-04").param("adults", "2"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().json("""
-                        {"code":"INTERNAL_ERROR","message":"unexpected error"}""", true));
+                        {"code":"INTERNAL_ERROR","message":"unexpected error"}""", JsonCompareMode.STRICT));
     }
 
     @Test
@@ -227,5 +228,40 @@ class SearchControllerTest {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(URL)
                         .param("checkIn", "2026-09-01").param("checkOut", "2026-09-04").param("adults", "2"))
                 .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    void T110_adults_가_21_이면_400_INVALID_PARAMETER() throws Exception {
+        mvc.perform(get(URL).param("checkIn", "2026-09-01").param("checkOut", "2026-09-04").param("adults", "21"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().json("""
+                        {"code":"INVALID_PARAMETER","message":"adults must be at most 20"}""", JsonCompareMode.STRICT));
+    }
+
+    @Test
+    void T111_인원_합계가_넘칠_만큼_크면_400_이고_서비스를_호출하지_않는다() throws Exception {
+        mvc.perform(get(URL).param("checkIn", "2026-09-01").param("checkOut", "2026-09-04")
+                        .param("adults", "2147483647").param("children", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_PARAMETER"));
+        verify(service, never()).search(any());
+    }
+
+    @Test
+    void FX05_children_이_21_이면_400_INVALID_PARAMETER() throws Exception {
+        mvc.perform(get(URL).param("checkIn", "2026-09-01").param("checkOut", "2026-09-04")
+                        .param("adults", "2").param("children", "21"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().json("""
+                        {"code":"INVALID_PARAMETER","message":"children must be at most 20"}""", JsonCompareMode.STRICT));
+    }
+
+    @Test
+    void T112_adults_20_children_20_은_허용한다() throws Exception {
+        when(service.search(any())).thenReturn(new SearchResult(SEP_1_TO_4, List.of(), List.of()));
+
+        mvc.perform(get(URL).param("checkIn", "2026-09-01").param("checkOut", "2026-09-04")
+                        .param("adults", "20").param("children", "20"))
+                .andExpect(status().isOk());
     }
 }

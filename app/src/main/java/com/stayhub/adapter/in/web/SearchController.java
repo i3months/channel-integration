@@ -14,6 +14,12 @@ public class SearchController {
 
     static final int MAX_NIGHTS = 30;
 
+    /**
+     * 성인, 아동 각각의 상한 (FX-05). 상한이 없으면 int 최댓값에서 투숙 인원 합계가 음수로 넘쳐 인원 필터를 통과한다.
+     * 여러 객실을 묶어 파는 경우는 범위 밖이므로 객실 한 개의 수용 인원보다 넉넉하면 충분하다.
+     */
+    static final int MAX_GUESTS_PER_TYPE = 20;
+
     private final SearchStaysService service;
 
     public SearchController(SearchStaysService service) {
@@ -43,8 +49,16 @@ public class SearchController {
         if (criteria.adults() < 1) {
             throw new InvalidSearchRequestException("INVALID_PARAMETER", "adults must be at least 1");
         }
+        if (criteria.adults() > MAX_GUESTS_PER_TYPE) {
+            throw new InvalidSearchRequestException("INVALID_PARAMETER",
+                    "adults must be at most " + MAX_GUESTS_PER_TYPE);
+        }
         if (criteria.children() < 0) {
             throw new InvalidSearchRequestException("INVALID_PARAMETER", "children must be at least 0");
+        }
+        if (criteria.children() > MAX_GUESTS_PER_TYPE) {
+            throw new InvalidSearchRequestException("INVALID_PARAMETER",
+                    "children must be at most " + MAX_GUESTS_PER_TYPE);
         }
     }
 }
